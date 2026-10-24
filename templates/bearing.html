@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}深沟球轴承寿命 · 机械工程计算器{% endblock %}
+
+{% block content %}
+<h1>深沟球轴承寿命计算</h1>
+<p class="page-intro">
+  先由 F<sub>a</sub>/C<sub>0r</sub> 查表（线性插值）确定 e 与 Y，按 F<sub>a</sub>/F<sub>r</sub> 是否超过 e 判定轴向载荷是否占主导，
+  算出当量动载荷 P 后套基本额定寿命公式。Cr、C0r 查轴承样本（如 6208：Cr ≈ 29.5 kN，输入 29500）。
+</p>
+
+{% if errors %}
+<div class="error-box">
+  <strong>输入有误，请检查：</strong>
+  <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<form method="post" class="calc-form">
+  <fieldset>
+    <legend>载荷与轴承参数</legend>
+    <div class="field-row">
+      <div class="field">
+        <label for="Fr">径向载荷 F<sub>r</sub> (N)</label>
+        <input id="Fr" name="Fr" type="number" step="any" min="0" required
+               placeholder="如 4000" value="{{ form.get('Fr') or '' }}">
+      </div>
+      <div class="field">
+        <label for="Fa">轴向载荷 F<sub>a</sub> (N)</label>
+        <input id="Fa" name="Fa" type="number" step="any" min="0"
+               placeholder="纯径向可填 0" value="{{ form.get('Fa') or '' }}">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="Cr">基本额定动载荷 C<sub>r</sub> (N)</label>
+        <input id="Cr" name="Cr" type="number" step="any" min="0" required
+               placeholder="查轴承样本" value="{{ form.get('Cr') or '' }}">
+      </div>
+      <div class="field">
+        <label for="Cor">基本额定静载荷 C<sub>0r</sub> (N)</label>
+        <input id="Cor" name="Cor" type="number" step="any" min="0" required
+               placeholder="查轴承样本（用于定 e、Y）" value="{{ form.get('Cor') or '' }}">
+      </div>
+    </div>
+    <div class="field">
+      <label for="n">转速 n (r/min)</label>
+      <input id="n" name="n" type="number" step="any" min="0" required
+             placeholder="如 1000" value="{{ form.get('n') or '' }}">
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>修正系数（教材口径，默认 1.0）</legend>
+    <div class="field-row">
+      <div class="field">
+        <label for="f_t">温度系数 f<sub>t</sub></label>
+        <input id="f_t" name="f_t" type="number" step="any" min="0"
+               placeholder="工作温度 ≤120℃ 取 1.0" value="{{ form.get('f_t') or '' }}">
+      </div>
+      <div class="field">
+        <label for="f_p">载荷系数 f<sub>p</sub></label>
+        <input id="f_p" name="f_p" type="number" step="any" min="0"
+               placeholder="平稳 1.0~1.2，中等冲击 1.2~1.8" value="{{ form.get('f_p') or '' }}">
+      </div>
+    </div>
+  </fieldset>
+
+  <button type="submit">计算寿命</button>
+</form>
+
+{% if result %}
+<section class="result-box">
+  <h2>计算结果</h2>
+  <table>
+    <tr><th>当量动载荷 P</th><td><strong>{{ result['equivalent_load_N']|sig }} N</strong></td></tr>
+    <tr><th>轴向载荷判定</th>
+        <td>F<sub>a</sub>/F<sub>r</sub> = {{ result['Fa_over_Fr']|sig if result['Fa_over_Fr'] is not none else '∞' }}，
+            e = {{ result['e']|sig }} →
+            {% if result['axial_dominant'] %}轴向占主导：X = 0.56，Y = 查表插值{% else %}轴向影响可忽略：X = 1，Y = 0{% endif %}</td></tr>
+    <tr><th>X、Y（实际代入）</th><td>X = {{ result['X']|sig }}，Y = {{ result['Y']|sig }}</td></tr>
+    <tr><th>Y 查表值（备查）</th><td>Y<sub>table</sub> = {{ result['Y_table']|sig }}（F<sub>a</sub>/C<sub>0r</sub> = {{ result['Fa_over_C0r']|sig }} 插值所得；轴向不主导时代入值为 0，两个 Y 别混用）</td></tr>
+    <tr><th>基本额定寿命 L10</th><td><strong>{{ result['L10_million_rev']|sig }} ×10⁶ 转</strong></td></tr>
+    <tr><th>基本额定寿命 L10h</th><td><strong>{{ result['L10_hours']|sig }} h</strong></td></tr>
+    <tr><th>折算工作年限</th><td>{{ result['L10_years_300d_8h']|sig }} 年（按每年 300 天、每天 8 小时）</td></tr>
+  </table>
+</section>
+{% endif %}
+
+<section class="basis-box">
+  <h2>计算依据</h2>
+  <ul>
+    <li>当量动载荷 P = X·F<sub>r</sub> + Y·F<sub>a</sub>；F<sub>a</sub>/F<sub>r</sub> ≤ e 时取 X=1、Y=0，否则 X=0.56、Y 由 F<sub>a</sub>/C<sub>0r</sub> 查表线性插值（GB/T 6391 注明"未列值用线性插值"）。</li>
+    <li>基本额定寿命 L10 = (C/P)³（10⁶ 转，球轴承 ε=3）；L10h = 10⁶/(60n)·(f<sub>t</sub>C/(f<sub>p</sub>P))³。</li>
+    <li>出处：濮良贵《机械设计》（第 9 版）第 13 章「滚动轴承」；GB/T 6391 / ISO 281；X、Y 表与 Shigley《Mechanical Engineering Design》Table 11-1 交叉核对。</li>
+    <li><strong>诚实声明：</strong>f<sub>t</sub>、f<sub>p</sub> 是老版教材 / GB 旧制的修正方式；ISO 281:2007 起改用 a<sub>ISO</sub> 修正额定寿命，两者口径不同。</li>
+  </ul>
+</section>
+{% endblock %}

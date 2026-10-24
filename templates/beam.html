@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}梁挠度与弯矩 · 机械工程计算器{% endblock %}
+
+{% block content %}
+<h1>梁的挠度与弯矩</h1>
+<p class="page-intro">
+  简支梁 / 悬臂梁，集中载荷与全跨均布载荷可以单独算也可以叠加。
+  挠度以<strong>向下为正</strong>（与载荷同向），弯矩以<strong>下侧受拉为正</strong>。
+  本页输入：长度 mm、力 N、均布载荷 N/mm，提交后自动换算成 SI（m、N、N/m）再计算。
+</p>
+
+{% if errors %}
+<div class="error-box">
+  <strong>输入有误，请检查：</strong>
+  <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<form method="post" class="calc-form">
+  <fieldset>
+    <legend>梁与载荷</legend>
+
+    <div class="field">
+      <label for="support">支承形式</label>
+      <select id="support" name="support">
+        <option value="simply" {{ 'selected' if form.get('support', 'simply') == 'simply' }}>简支梁</option>
+        <option value="cantilever" {{ 'selected' if form.get('support') == 'cantilever' }}>悬臂梁（固定端在左）</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="L">跨度 L (mm) <em>必填</em></label>
+      <input id="L" name="L" type="number" step="any" min="0" required
+             placeholder="如 2000" value="{{ form.get('L') or '' }}">
+    </div>
+
+    <div class="field">
+      <label for="P">集中载荷 P (N) <em>选填</em></label>
+      <input id="P" name="P" type="number" step="any" min="0"
+             placeholder="向下为正，如 1000" value="{{ form.get('P') or '' }}">
+    </div>
+
+    <div class="field">
+      <label for="a">载荷位置 a (mm) <em>有 P 时选填</em></label>
+      <input id="a" name="a" type="number" step="any" min="0"
+             placeholder="简支梁：距左支座；悬臂梁：距固定端；留空 = 跨中 / 自由端"
+             value="{{ form.get('a') or '' }}">
+    </div>
+
+    <div class="field">
+      <label for="q">均布载荷 q (N/mm) <em>选填</em></label>
+      <input id="q" name="q" type="number" step="any" min="0"
+             placeholder="全跨均布，向下为正" value="{{ form.get('q') or '' }}">
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>材料与截面</legend>
+
+    <div class="field">
+      <label for="material">材料（决定弹性模量 E）</label>
+      <select id="material" name="material">
+        {% for value, text in materials %}
+        <option value="{{ value }}" {{ 'selected' if form.get('material', '钢') == value }}>{{ text }}</option>
+        {% endfor %}
+        <option value="custom" {{ 'selected' if form.get('material') == 'custom' }}>自定义…</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="E_gpa">弹性模量 E (GPa) <em>选"自定义"时填写</em></label>
+      <input id="E_gpa" name="E_gpa" type="number" step="any" min="0"
+             placeholder="如 200" value="{{ form.get('E_gpa') or '' }}">
+    </div>
+
+    <div class="field">
+      <label for="section">截面类型</label>
+      <select id="section" name="section">
+        <option value="rect" {{ 'selected' if form.get('section', 'rect') == 'rect' }}>矩形 b×h</option>
+        <option value="circle" {{ 'selected' if form.get('section') == 'circle' }}>实心圆 φd</option>
+        <option value="custom" {{ 'selected' if form.get('section') == 'custom' }}>直接输入惯性矩 I</option>
+      </select>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="b">宽 b (mm) <em>矩形截面填写</em></label>
+        <input id="b" name="b" type="number" step="any" min="0" value="{{ form.get('b') or '' }}">
+      </div>
+      <div class="field">
+        <label for="h">高 h (mm) <em>矩形截面填写</em></label>
+        <input id="h" name="h" type="number" step="any" min="0" value="{{ form.get('h') or '' }}">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="d">直径 d (mm) <em>圆截面填写</em></label>
+      <input id="d" name="d" type="number" step="any" min="0" value="{{ form.get('d') or '' }}">
+    </div>
+
+    <div class="field">
+      <label for="I">惯性矩 I (mm⁴) <em>选"直接输入"时填写</em></label>
+      <input id="I" name="I" type="number" step="any" min="0"
+             placeholder="如 100000" value="{{ form.get('I') or '' }}">
+    </div>
+  </fieldset>
+
+  <button type="submit">计算</button>
+</form>
+
+{% if result %}
+<section class="result-box">
+  <h2>计算结果（{{ result['support'] }}）</h2>
+  <table>
+    <tr><th>最大挠度 δ<sub>max</sub></th>
+        <td>{{ result['max_deflection_mm']|sig }} mm（在 x = {{ result['max_deflection_at_x_mm']|sig }} mm 处）</td></tr>
+    {% if result['closed_form_mm'] is not none %}
+    <tr><th>闭式解对照</th>
+        <td>{{ result['closed_form_mm']|sig }} mm（教材经典工况的解析公式，与数值扫描互相验证）</td></tr>
+    {% endif %}
+    <tr><th>最大弯矩 M<sub>max</sub></th>
+        <td>{{ result['max_moment_Nm']|sig }} N·m（在 x = {{ result['max_moment_at_x_mm']|sig }} mm 处）</td></tr>
+    {% if result['support'] == '简支梁' %}
+    <tr><th>支座反力</th>
+        <td>左支座 {{ result['reactions']['left_N']|sig }} N，右支座 {{ result['reactions']['right_N']|sig }} N</td></tr>
+    {% else %}
+    <tr><th>固定端反力</th>
+        <td>{{ result['reactions']['fixed_end_N']|sig }} N，固定端弯矩 {{ result['reactions']['fixed_end_moment_Nm']|sig }} N·m（上侧受拉）</td></tr>
+    {% endif %}
+  </table>
+
+  <details class="si-echo">
+    <summary>单位换算回显（本页输入 → 内部 SI）</summary>
+    <table>
+      {% for name, raw, si in result['si_echo'] %}
+      <tr><th>{{ name }}</th><td>{{ raw }}</td><td>→ {{ si }}</td></tr>
+      {% endfor %}
+    </table>
+  </details>
+</section>
+{% endif %}
+
+<section class="basis-box">
+  <h2>计算依据</h2>
+  <ul>
+    <li>挠度与弯矩按<strong>叠加法</strong>合成：任意位置的集中载荷 + 全跨均布载荷两个通解相加，最大值用闭式解与数值扫描双路互检。</li>
+    <li>经典特例：简支跨中集中 δ = PL³/(48EI)；简支均布 δ = 5qL⁴/(384EI)；悬臂端集中 δ = PL³/(3EI)；悬臂均布 δ = qL⁴/(8EI)。</li>
+    <li>出处：刘鸿文《材料力学》（第 6 版）第 6 章「弯曲变形」及附录Ⅱ；孙训方《材料力学》附录Ⅱ。</li>
+    <li>挠度正方向与载荷同向（向下为正）；悬臂梁弯矩为负表示固定端上侧受拉。</li>
+  </ul>
+  <p class="muted">挠度曲线图（Matplotlib）将在阶段 3 接入本页。</p>
+</section>
+{% endblock %}

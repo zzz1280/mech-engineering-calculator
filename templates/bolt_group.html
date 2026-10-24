@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% block title %}螺栓组受力分析 · 机械工程计算器{% endblock %}
+
+{% block content %}
+<h1>螺栓组受力分析</h1>
+<p class="page-intro">
+  五种教材典型工况。单位沿用机械设计教材口径：<strong>力 N、力矩/扭矩 N·mm、长度 mm</strong>。
+  基本假定（公式成立的前提）：被连接件为刚体、螺栓变形在弹性范围内、接合面受倾覆力矩后保持平面。
+</p>
+
+{% if errors %}
+<div class="error-box">
+  <strong>输入有误，请检查：</strong>
+  <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+{# ---------------- 工况 A：轴向载荷均布 ---------------- #}
+<section class="case-section {{ 'has-result' if result_case == 'axial' }}">
+<h2>① 轴向载荷通过形心 —— 各螺栓均分</h2>
+<form method="post" class="calc-form">
+  <input type="hidden" name="case" value="axial">
+  <div class="field-row">
+    <div class="field">
+      <label for="ax_F">总轴向载荷 F (N)</label>
+      <input id="ax_F" name="F" type="number" step="any" min="0" required
+             placeholder="如 12000" value="{{ form.get('F') or '' if result_case == 'axial' else '' }}">
+    </div>
+    <div class="field">
+      <label for="ax_z">螺栓个数 z</label>
+      <input id="ax_z" name="z" type="number" min="1" step="1" required
+             placeholder="如 4" value="{{ form.get('z') or '' if result_case == 'axial' else '' }}">
+    </div>
+  </div>
+  <button type="submit">计算</button>
+</form>
+
+{% if result_case == 'axial' and result %}
+<div class="result-box">
+  <h3>结果：F<sub>i</sub> = F / z</h3>
+  <table>
+    <tr><th>总轴向载荷</th><td>{{ result['F_total_N']|sig }} N</td></tr>
+    <tr><th>每个螺栓工作载荷</th><td>{{ result['max_load_N']|sig }} N（共 {{ result['z'] }} 个，全部相同）</td></tr>
+  </table>
+</div>
+{% endif %}
+</section>
+
+{# ---------------- 工况 B：倾覆力矩（自定义布置） ---------------- #}
+<section class="case-section {{ 'has-result' if result_case == 'overturn' }}">
+<h2>② 倾覆力矩（绕翻转轴线 O-O）—— 可叠加轴向载荷</h2>
+<p class="muted">填每个螺栓轴线<strong>到翻转轴线</strong>的距离（不是到形心的距离！），用逗号或空格分隔。例：两排各 2 个，远排 200 mm、近排 50 mm → 200, 200, 50, 50</p>
+<form method="post" class="calc-form">
+  <input type="hidden" name="case" value="overturn">
+  <div class="field">
+    <label for="ov_M">倾覆力矩 M (N·mm)</label>
+    <input id="ov_M" name="M" type="number" step="any" min="0" required
+           placeholder="如 1000000" value="{{ form.get('M') or '' if result_case == 'overturn' else '' }}">
+  </div>
+  <div class="field">
+    <label for="ov_d">各螺栓到翻转轴线的距离 (mm)</label>
+    <textarea id="ov_d" name="distances" rows="2" required
+              placeholder="200, 200, 50, 50">{{ form.get('distances') or '' if result_case == 'overturn' else '' }}</textarea>
+  </div>
+  <div class="field">
+    <label for="ov_fa">叠加轴向载荷 F<sub>axial</sub> (N) <em>选填</em></label>
+    <input id="ov_fa" name="F_axial" type="number" step="any" min="0"
+           placeholder="沿螺栓轴线、通过形心" value="{{ form.get('F_axial') or '' if result_case == 'overturn' else '' }}">
+  </div>
+  <button type="submit">计算</button>
+</form>
+
+{% if result_case == 'overturn' and result %}
+<div class="result-box">
+  <h3>结果：F<sub>i</sub> = F<sub>axial</sub>/z + M·L<sub>i</sub>/ΣL<sub>j</sub>²</h3>
+  <table>
+    <tr><th>螺栓</th><th>到轴线距离 (mm)</th><th>力矩分量 (N)</th><th>轴向分量 (N)</th><th>合计 (N)</th></tr>
+    {% for b in result['bolts'] %}
+    <tr class="{{ 'danger' if b['bolt'] == result['max_load_bolt'] }}">
+      <td>{{ b['bolt'] }}</td><td>{{ b['distance_mm']|sig }}</td>
+      <td>{{ b['from_moment_N']|sig }}</td><td>{{ b['from_axial_N']|sig }}</td>
+      <td><strong>{{ b['total_N']|sig }}</strong></td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p>ΣL² = {{ result['sum_distance_squared_mm2']|sig }} mm²；
+     最危险螺栓：<strong>{{ result['max_load_bolt'] }}</strong>（{{ result['max_load_N']|sig }} N，距轴线最远者）。</p>
+</div>
+{% endif %}
+</section>
+
+{# ---------------- 工况 B2：圆形法兰 ---------------- #}
+<section class="case-section {{ 'has-result' if result_case == 'flange' }}">
+<h2>③ 圆形凸缘（法兰）均布螺栓 + 倾覆力矩</h2>
+<p class="muted">z 个螺栓均布于直径 D 的圆周，绕一条直径翻转。注意：z 不是 4 的倍数时，最远螺栓并不在 L = r 处，本工具按实测最大力臂计算（避免 4M/(zD) 高估约 15.5% 的经典错误）。</p>
+<form method="post" class="calc-form">
+  <input type="hidden" name="case" value="flange">
+  <div class="field-row">
+    <div class="field">
+      <label for="fl_M">倾覆力矩 M (N·mm)</label>
+      <input id="fl_M" name="M" type="number" step="any" min="0" required
+             placeholder="如 500000" value="{{ form.get('M') or '' if result_case == 'flange' else '' }}">
+    </div>
+    <div class="field">
+      <label for="fl_z">螺栓个数 z（≥3）</label>
+      <input id="fl_z" name="z" type="number" min="3" step="1" required
+             placeholder="如 6" value="{{ form.get('z') or '' if result_case == 'flange' else '' }}">
+    </div>
+    <div class="field">
+      <label for="fl_D">中心圆直径 D (mm)</label>
+      <input id="fl_D" name="D" type="number" step="any" min="0" required
+             placeholder="如 200" value="{{ form.get('D') or '' if result_case == 'flange' else '' }}">
+    </div>
+  </div>
+  <div class="field">
+    <label for="fl_fa">叠加轴向载荷 F<sub>axial</sub> (N) <em>选填</em></label>
+    <input id="fl_fa" name="F_axial" type="number" step="any" min="0"
+           value="{{ form.get('F_axial') or '' if result_case == 'flange' else '' }}">
+  </div>
+  <button type="submit">计算</button>
+</form>
+
+{% if result_case == 'flange' and result %}
+<div class="result-box">
+  <h3>结果：F<sub>max</sub> = 2M·L<sub>max</sub>/(z·r²) + F<sub>axial</sub>/z</h3>
+  <table>
+    <tr><th>螺栓分布</th><td>z = {{ result['z'] }} 个，中心圆 D = {{ result['pitch_diameter_mm']|sig }} mm</td></tr>
+    <tr><th>最远螺栓力臂 L<sub>max</sub></th><td>{{ result['max_distance_mm']|sig }} mm</td></tr>
+    <tr><th>最危险螺栓</th><td><strong>{{ result['max_load_bolt'] }}</strong></td></tr>
+    <tr><th>最大工作载荷</th><td><strong>{{ result['max_load_N']|sig }} N</strong>（闭式解对照 {{ result['closed_form_max_N']|sig }} N）</td></tr>
+  </table>
+  <details>
+    <summary>各螺栓明细</summary>
+    <table>
+      <tr><th>螺栓</th><th>到轴线距离 (mm)</th><th>力矩分量 (N)</th><th>轴向分量 (N)</th><th>合计 (N)</th></tr>
+      {% for b in result['bolts'] %}
+      <tr><td>{{ b['bolt'] }}</td><td>{{ b['distance_mm']|sig }}</td>
+          <td>{{ b['from_moment_N']|sig }}</td><td>{{ b['from_axial_N']|sig }}</td>
+          <td>{{ b['total_N']|sig }}</td></tr>
+      {% endfor %}
+    </table>
+  </details>
+</div>
+{% endif %}
+</section>
+
+{# ---------------- 工况 C：扭矩 ---------------- #}
+<section class="case-section {{ 'has-result' if result_case == 'torque' }}">
+<h2>④ 铰制孔螺栓圆周布置 + 扭矩（受剪）</h2>
+<p class="muted">各螺栓受力大小相等、方向垂直于各自半径。与倾覆力矩工况的区别：这里转轴在圆心，距离用半径 r = D/2。</p>
+<form method="post" class="calc-form">
+  <input type="hidden" name="case" value="torque">
+  <div class="field-row">
+    <div class="field">
+      <label for="tq_T">扭矩 T (N·mm)</label>
+      <input id="tq_T" name="T" type="number" step="any" min="0" required
+             placeholder="如 120000" value="{{ form.get('T') or '' if result_case == 'torque' else '' }}">
+    </div>
+    <div class="field">
+      <label for="tq_z">螺栓个数 z</label>
+      <input id="tq_z" name="z" type="number" min="1" step="1" required
+             placeholder="如 6" value="{{ form.get('z') or '' if result_case == 'torque' else '' }}">
+    </div>
+    <div class="field">
+      <label for="tq_D">中心圆直径 D (mm)</label>
+      <input id="tq_D" name="D" type="number" step="any" min="0" required
+             placeholder="如 120" value="{{ form.get('D') or '' if result_case == 'torque' else '' }}">
+    </div>
+  </div>
+  <button type="submit">计算</button>
+</form>
+
+{% if result_case == 'torque' and result %}
+<div class="result-box">
+  <h3>结果：F = T/(z·r) = 2T/(z·D)</h3>
+  <table>
+    <tr><th>每个螺栓受剪载荷</th><td><strong>{{ result['max_load_N']|sig }} N</strong>（共 {{ result['z'] }} 个，全部相同）</td></tr>
+    <tr><th>校核</th><td>Σ(F·r) = {{ result['T_Nmm']|sig }} N·mm = T ✓</td></tr>
+  </table>
+</div>
+{% endif %}
+</section>
+
+{# ---------------- 工况 D：摩擦预紧 ---------------- #}
+<section class="case-section {{ 'has-result' if result_case == 'preload' }}">
+<h2>⑤ 普通螺栓靠摩擦承受横向载荷 —— 求所需预紧力</h2>
+<p class="muted">所需预紧力远大于外载荷均分值——这正是普通螺栓受横向载荷的代价，重载场合应改用铰制孔螺栓或销。</p>
+<form method="post" class="calc-form">
+  <input type="hidden" name="case" value="preload">
+  <div class="field-row">
+    <div class="field">
+      <label for="pr_F">横向总载荷 F<sub>Σ</sub> (N)</label>
+      <input id="pr_F" name="F_transverse" type="number" step="any" min="0" required
+             placeholder="如 5000" value="{{ form.get('F_transverse') or '' if result_case == 'preload' else '' }}">
+    </div>
+    <div class="field">
+      <label for="pr_z">螺栓个数 z</label>
+      <input id="pr_z" name="z" type="number" min="1" step="1" required
+             placeholder="如 4" value="{{ form.get('z') or '' if result_case == 'preload' else '' }}">
+    </div>
+    <div class="field">
+      <label for="pr_f">摩擦系数 f</label>
+      <input id="pr_f" name="f" type="number" step="any" min="0" required
+             placeholder="钢对钢干摩擦常取 0.15" value="{{ form.get('f') or '' if result_case == 'preload' else '' }}">
+    </div>
+    <div class="field">
+      <label for="pr_m">接合面对数 m</label>
+      <input id="pr_m" name="joints" type="number" min="1" step="1" required
+             placeholder="单剪 1，双剪 2" value="{{ form.get('joints') or '' if result_case == 'preload' else '' }}">
+    </div>
+    <div class="field">
+      <label for="pr_k">可靠性系数 K<sub>f</sub></label>
+      <input id="pr_k" name="K_f" type="number" step="any" min="0" required
+             placeholder="教材取 1.1~1.3" value="{{ form.get('K_f') or '' if result_case == 'preload' else '' }}">
+    </div>
+  </div>
+  <button type="submit">计算</button>
+</form>
+
+{% if result_case == 'preload' and result %}
+<div class="result-box">
+  <h3>结果：F<sub>0</sub> ≥ K<sub>f</sub>·F<sub>Σ</sub>/(f·z·m)</h3>
+  <table>
+    <tr><th>所需单个螺栓预紧力</th><td><strong>{{ result['required_preload_N']|sig }} N</strong></td></tr>
+    <tr><th>对照</th><td>外载荷均分只有 {{ (result['F_transverse_N'] / result['z'])|sig }} N/个，预紧力是它的 {{ (result['required_preload_N'] / (result['F_transverse_N'] / result['z']))|sig }} 倍</td></tr>
+  </table>
+</div>
+{% endif %}
+</section>
+
+<section class="basis-box">
+  <h2>计算依据</h2>
+  <ul>
+    <li>轴向均布 F<sub>i</sub> = F/z；倾覆力矩 F<sub>i</sub> = M·L<sub>i</sub>/ΣL<sub>j</sub>²（受力与到翻转轴线的距离成正比）；圆周扭矩 F = 2T/(z·D)；摩擦预紧 F<sub>0</sub> ≥ K<sub>f</sub>·F<sub>Σ</sub>/(f·z·m)。</li>
+    <li>圆形法兰的 ΣL<sub>j</sub>² = z·r²/2（均布圆周解析求和），闭式解与逐点求和在代码里互相校验。</li>
+    <li>出处：濮良贵《机械设计》（第 9 版）第 5 章「螺纹连接」；邱宣怀《机械设计》（第 4 版）同章。</li>
+  </ul>
+</section>
+{% endblock %}

@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}公差配合查询 · 机械工程计算器{% endblock %}
+
+{% block content %}
+<h1>公差与配合查询</h1>
+<p class="page-intro">
+  查的是 <strong>GB/T 1800.2—2020 标准表值</strong>（不是经验公式近似，二者有 1~2 μm 圆整差异），
+  公称尺寸 ≤ 500 mm、IT5~IT18。偏差同时给出 μm 与 mm，方便直接标注到图上。
+  未内置的代号（a、b、j、t、u、v、x、y、z、za、zb、zc）会明确报错，绝不给近似数。
+</p>
+
+{% if errors %}
+<div class="error-box">
+  <strong>输入有误，请检查：</strong>
+  <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+{# ---------------- 表单一：单公差带偏差查询 ---------------- #}
+<section class="case-section {{ 'has-result' if result_mode == 'deviation' }}">
+<h2>① 孔 / 轴公差带极限偏差查询</h2>
+<form method="post" class="calc-form">
+  <input type="hidden" name="mode" value="deviation">
+  <div class="field-row">
+    <div class="field">
+      <label for="dv_kind">查孔还是轴</label>
+      <select id="dv_kind" name="kind">
+        <option value="hole" {{ 'selected' if form.get('kind', 'hole') == 'hole' }}>孔（大写代号，如 H、K、JS）</option>
+        <option value="shaft" {{ 'selected' if form.get('kind') == 'shaft' }}>轴（小写代号，如 h、g、js）</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="dv_nominal">公称尺寸 (mm)</label>
+      <input id="dv_nominal" name="nominal" type="number" step="any" min="0" required
+             placeholder="如 30" value="{{ form.get('nominal') or '' if result_mode == 'deviation' else '' }}">
+    </div>
+    <div class="field">
+      <label for="dv_letter">基本偏差代号</label>
+      <input id="dv_letter" name="letter" required maxlength="2"
+             placeholder="如 H、g、js" value="{{ form.get('letter') or '' if result_mode == 'deviation' else '' }}">
+    </div>
+    <div class="field">
+      <label for="dv_grade">公差等级 IT</label>
+      <select id="dv_grade" name="grade">
+        {% for g in it_grades %}
+        <option value="{{ g }}" {{ 'selected' if (form.get('grade', '7')|int) == g }}>{{ g }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  <button type="submit">查询偏差</button>
+</form>
+
+{% if result_mode == 'deviation' and result %}
+<div class="result-box">
+  <h3>{{ result['kind'] }}公差带 {{ result['code'] }}（φ{{ result['nominal_mm']|sig }} mm）</h3>
+  <table>
+    <tr><th>标准公差</th><td>IT{{ result['IT_grade'] }} = {{ result['IT_um']|sig }} μm</td></tr>
+    <tr><th>上偏差</th><td><strong>{{ '+' if result['upper_deviation_um'] > 0 else '' }}{{ result['upper_deviation_um']|sig }} μm</strong>（{{ result['upper_deviation_mm']|sig }} mm）</td></tr>
+    <tr><th>下偏差</th><td><strong>{{ '+' if result['lower_deviation_um'] > 0 else '' }}{{ result['lower_deviation_um']|sig }} μm</strong>（{{ result['lower_deviation_mm']|sig }} mm）</td></tr>
+    {% if result.get('warning') %}<tr><th>注意</th><td class="warn">{{ result['warning'] }}</td></tr>{% endif %}
+  </table>
+  <p class="muted">依据：{{ result['note'] }}</p>
+</div>
+{% endif %}
+</section>
+
+{# ---------------- 表单二：配合查询 ---------------- #}
+<section class="case-section {{ 'has-result' if result_mode == 'fit' }}">
+<h2>② 配合查询（极限间隙 / 过盈）</h2>
+<p class="muted">填孔和轴的公差带代号，如孔 H7、轴 g6。判据：最大间隙 X<sub>max</sub> = ES − ei，最小间隙 X<sub>min</sub> = EI − es，负值即过盈。</p>
+<form method="post" class="calc-form">
+  <input type="hidden" name="mode" value="fit">
+  <div class="field-row">
+    <div class="field">
+      <label for="ft_nominal">公称尺寸 (mm)</label>
+      <input id="ft_nominal" name="nominal" type="number" step="any" min="0" required
+             placeholder="如 30" value="{{ form.get('nominal') or '' if result_mode == 'fit' else '' }}">
+    </div>
+    <div class="field">
+      <label for="ft_hole">孔公差带</label>
+      <input id="ft_hole" name="hole_code" required maxlength="4"
+             placeholder="如 H7" value="{{ form.get('hole_code') or '' if result_mode == 'fit' else '' }}">
+    </div>
+    <div class="field">
+      <label for="ft_shaft">轴公差带</label>
+      <input id="ft_shaft" name="shaft_code" required maxlength="4"
+             placeholder="如 g6" value="{{ form.get('shaft_code') or '' if result_mode == 'fit' else '' }}">
+    </div>
+  </div>
+  <button type="submit">查询配合</button>
+</form>
+
+{% if result_mode == 'fit' and result %}
+<div class="result-box">
+  <h3>配合 {{ result['fit_code'] }} —— {{ result['fit_kind'] }}（{{ result['base_system'] }}）</h3>
+  <table>
+    <tr><th>最大间隙 X<sub>max</sub></th><td>{{ '+' if result['max_clearance_um'] > 0 else '' }}{{ result['max_clearance_um']|sig }} μm</td></tr>
+    <tr><th>最小间隙 X<sub>min</sub></th><td>{{ '+' if result['min_clearance_um'] > 0 else '' }}{{ result['min_clearance_um']|sig }} μm{% if result['min_clearance_um'] < 0 %}（即最大过盈 {{ result['max_interference_um']|sig }} μm）{% endif %}</td></tr>
+    <tr><th>孔 {{ result['hole']['code'] }}</th><td>
+      ES = {{ result['hole']['ES_um']|sig }} μm，EI = {{ result['hole']['EI_um']|sig }} μm；
+      极限尺寸 {{ result['hole_limits_mm'][0]|sig }} ~ {{ result['hole_limits_mm'][1]|sig }} mm</td></tr>
+    <tr><th>轴 {{ result['shaft']['code'] }}</th><td>
+      es = {{ result['shaft']['es_um']|sig }} μm，ei = {{ result['shaft']['ei_um']|sig }} μm；
+      极限尺寸 {{ result['shaft_limits_mm'][0]|sig }} ~ {{ result['shaft_limits_mm'][1]|sig }} mm</td></tr>
+    <tr><th>公差带宽度</th><td>孔 {{ result['tolerance_zone_hole_um']|sig }} μm，轴 {{ result['tolerance_zone_shaft_um']|sig }} μm</td></tr>
+  </table>
+  {% if result['hole'].get('note') %}<p class="muted">孔：{{ result['hole']['note'] }}</p>{% endif %}
+  {% if result['shaft'].get('note') %}<p class="muted">轴：{{ result['shaft']['note'] }}</p>{% endif %}
+  {% if result['shaft'].get('warning') %}<p class="warn">{{ result['shaft']['warning'] }}</p>{% endif %}
+</div>
+{% endif %}
+</section>
+
+<section class="basis-box">
+  <h2>计算依据</h2>
+  <ul>
+    <li>轴：a~h 基本偏差为 es（ei = es − IT）；k~s 基本偏差为 ei（es = ei + IT）；js 对称 ±IT/2。IT 等级 ≥8 时 k 的基本偏差取 0。</li>
+    <li>孔：A~H 取 EI = −es(同名轴)；K~S 按 GB 规则加 Δ 换算（Δ = IT<sub>n</sub> − IT<sub>n−1</sub>），保证"同名配合互换"——基孔制 H7/k6 与基轴制 K7/h6 的极限间隙/过盈完全相同。</li>
+    <li>配合判据：X<sub>max</sub> = ES − ei，X<sub>min</sub> = EI − es；X<sub>min</sub> ≥ 0 为间隙配合，X<sub>max</sub> ≤ 0 为过盈配合，否则过渡配合。</li>
+    <li>出处：GB/T 1800.2—2020（修改采用 ISO 286-2）；表值经标准原文表、Schaeffler/FAG 样本、JIS B 0401 交叉核对。</li>
+    <li><strong>已知边界（诚实声明）：</strong>代号 a、b、j、t、u、v、x、y、z、za、zb、zc 未内置（报错而非近似）；尺寸 >50 mm 时 r、s 按 GB 子段细分，本表取子段首值并提示核对。</li>
+  </ul>
+</section>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+  <h1>机械工程计算器</h1>
+  <p>
+    把《材料力学》《机械设计》课程里反复手算的高频计算做成在线工具：
+    输入参数 → 得到结果和计算依据。每个计算器的公式都有教材出处，
+    并配「手算 vs 程序」对照的单元测试。
+  </p>
+</section>
+
+<section class="card-grid">
+  <a class="card" href="{{ url_for('beam_page') }}">
+    <h2>梁挠度与弯矩</h2>
+    <p>简支梁 / 悬臂梁，集中载荷与均布载荷（可叠加）。</p>
+    <p>输出：最大挠度（含闭式解对照）、最大弯矩、支反力。</p>
+    <p class="units">单位：长度 mm · 力 N · 均布载荷 N/mm</p>
+  </a>
+
+  <a class="card" href="{{ url_for('bolt_group_page') }}">
+    <h2>螺栓组受力分析</h2>
+    <p>轴向载荷均布、倾覆力矩（两排布置 / 圆形法兰）、扭矩、摩擦预紧五种工况。</p>
+    <p>输出：各螺栓工作载荷，标出最危险螺栓。</p>
+    <p class="units">单位：力 N · 力矩 N·mm · 长度 mm（教材口径）</p>
+  </a>
+
+  <a class="card" href="{{ url_for('bearing_page') }}">
+    <h2>深沟球轴承寿命</h2>
+    <p>当量动载荷 P = X·F<sub>r</sub> + Y·F<sub>a</sub>，基本额定寿命 L10。</p>
+    <p>输出：寿命（百万转 / 小时 / 年）、X·Y·e 判定过程。</p>
+    <p class="units">单位：载荷 N · 转速 r/min</p>
+  </a>
+
+  <a class="card" href="{{ url_for('fits_page') }}">
+    <h2>公差配合查询</h2>
+    <p>孔 / 轴公差带的上下偏差，配合的极限间隙与过盈。</p>
+    <p>输出：μm 与 mm 双单位、配合种类（间隙 / 过渡 / 过盈）。</p>
+    <p class="units">单位：尺寸 mm · 偏差 μm（国标表值，非公式近似）</p>
+  </a>
+</section>
+
+<section class="note-box">
+  <h2>工程约定</h2>
+  <ul>
+    <li>公式库是纯 Python 函数，不含任何 Web 代码；内部统一 <strong>SI 单位制</strong>，只在本站的输入输出层换算。</li>
+    <li>公式出处以教材与国标为准，写死在每个模块的注释里；拿不准的值宁可报错也不给近似数。</li>
+    <li>梁挠度曲线图（Matplotlib）将在阶段 3 接入。</li>
+  </ul>
+</section>
+{% endblock %}

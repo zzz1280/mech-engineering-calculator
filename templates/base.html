@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}机械工程计算器{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="{{ url_for('index') }}">⚙️ 机械工程计算器</a>
+  <nav>
+    {# 当前页高亮：Flask 把 request 暴露给模板，直接比对路径即可，不写 JS #}
+    <a href="{{ url_for('beam_page') }}"      class="{{ 'active' if request.path == '/beam' }}">梁挠度与弯矩</a>
+    <a href="{{ url_for('bolt_group_page') }}" class="{{ 'active' if request.path == '/bolt-group' }}">螺栓组受力</a>
+    <a href="{{ url_for('bearing_page') }}"    class="{{ 'active' if request.path == '/bearing' }}">轴承寿命</a>
+    <a href="{{ url_for('fits_page') }}"       class="{{ 'active' if request.path == '/fits' }}">公差配合</a>
+  </nav>
+</header>
+
+<main>
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="site-footer">
+  <p>
+    公式依据：刘鸿文《材料力学》（第 6 版）、濮良贵《机械设计》（第 9 版）、GB/T 1800.2—2020。
+    全部计算器都有手算对照的单元测试，公式库内部统一 SI 单位制，输入输出层负责换算。
+  </p>
+  <p class="disclaimer">计算结果供学习参考，工程应用请以规范手册为准。</p>
+</footer>
+</body>
+</html>

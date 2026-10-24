@@ -1,0 +1,193 @@
+/* 机械工程计算器 —— 阶段 2 站点样式
+   原则：不用任何前端框架（任务书范围控制），纯手写够用的样式；
+   配色克制，结果表是主角。 */
+
+:root {
+  --ink: #1f2933;
+  --muted: #6b7684;
+  --line: #d9e1e8;
+  --brand: #0f5c8c;
+  --brand-light: #eaf3f9;
+  --ok-bg: #f0f7f1;
+  --ok-line: #bfdec4;
+  --warn: #a05a00;
+  --danger-bg: #fdf0ef;
+  --danger-line: #e3a9a4;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+  color: var(--ink);
+  background: #f7f9fa;
+  line-height: 1.65;
+}
+
+main {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 24px 20px 48px;
+}
+
+h1 { font-size: 1.6rem; margin: 0.4em 0; }
+h2 { font-size: 1.15rem; margin: 0.6em 0 0.4em; }
+h3 { font-size: 1.02rem; margin: 0.4em 0; }
+
+a { color: var(--brand); }
+
+/* ---- 页头 / 页脚 ---- */
+.site-header {
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+  padding: 10px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 24px;
+}
+.site-header .brand {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--ink);
+  text-decoration: none;
+}
+.site-header nav { display: flex; flex-wrap: wrap; gap: 4px; }
+.site-header nav a {
+  text-decoration: none;
+  color: var(--muted);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+.site-header nav a:hover { background: var(--brand-light); color: var(--brand); }
+.site-header nav a.active { background: var(--brand); color: #fff; }
+
+.site-footer {
+  border-top: 1px solid var(--line);
+  background: #fff;
+  padding: 16px 20px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.site-footer p { max-width: 880px; margin: 4px auto; }
+.site-footer .disclaimer { color: var(--warn); }
+
+/* ---- 首页 ---- */
+.hero { margin-bottom: 20px; }
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.card {
+  display: block;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 16px;
+  text-decoration: none;
+  color: var(--ink);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.card:hover { border-color: var(--brand); box-shadow: 0 2px 10px rgba(15, 92, 140, 0.12); }
+.card h2 { color: var(--brand); margin-top: 0; }
+.card p { margin: 6px 0; font-size: 0.9rem; }
+.card .units { color: var(--muted); font-size: 0.82rem; }
+
+.note-box, .basis-box {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 18px;
+  margin: 16px 0;
+}
+.basis-box ul, .note-box ul { margin: 6px 0; padding-left: 22px; }
+.basis-box li, .note-box li { margin: 4px 0; font-size: 0.92rem; }
+
+/* ---- 表单 ---- */
+.page-intro { color: var(--muted); font-size: 0.95rem; }
+
+.calc-form {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 18px 16px;
+  margin: 14px 0;
+}
+fieldset { border: 1px solid var(--line); border-radius: 8px; margin: 12px 0; }
+legend { font-weight: 600; font-size: 0.92rem; padding: 0 6px; }
+
+.field { margin: 10px 0; min-width: 0; }
+.field-row { display: flex; flex-wrap: wrap; gap: 0 18px; }
+.field-row .field { flex: 1 1 150px; }
+
+.field label { display: block; font-size: 0.88rem; margin-bottom: 3px; }
+.field label em { font-style: normal; color: var(--muted); font-size: 0.8rem; }
+.field input, .field select, .field textarea {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 0.95rem;
+  background: #fff;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  outline: 2px solid var(--brand);
+  outline-offset: -1px;
+  border-color: var(--brand);
+}
+
+button {
+  background: var(--brand);
+  color: #fff;
+  border: 0;
+  border-radius: 6px;
+  padding: 8px 22px;
+  font: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+button:hover { filter: brightness(1.12); }
+
+/* ---- 提示与结果 ---- */
+.error-box {
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-line);
+  border-radius: 10px;
+  padding: 10px 18px;
+  margin: 14px 0;
+}
+.error-box ul { margin: 6px 0 2px; padding-left: 20px; }
+
+.result-box {
+  background: var(--ok-bg);
+  border: 1px solid var(--ok-line);
+  border-radius: 10px;
+  padding: 10px 18px 14px;
+  margin: 14px 0;
+}
+.result-box table { width: 100%; border-collapse: collapse; }
+.result-box th, .result-box td {
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.result-box tr:last-child th, .result-box tr:last-child td { border-bottom: 0; }
+.result-box th { width: 34%; color: var(--muted); font-weight: 500; white-space: nowrap; }
+
+.case-section { margin: 22px 0; }
+.case-section.has-result .calc-form { border-color: var(--ok-line); }
+
+tr.danger td { background: #fdf6ec; }
+.warn { color: var(--warn); font-size: 0.9rem; }
+.muted { color: var(--muted); font-size: 0.85rem; }
+
+details { margin-top: 8px; }
+details summary { cursor: pointer; color: var(--brand); font-size: 0.9rem; }
+details table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+details th, details td { text-align: left; padding: 4px 10px; border-bottom: 1px solid var(--line); font-size: 0.9rem; }
