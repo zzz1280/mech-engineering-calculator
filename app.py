@@ -33,6 +33,7 @@ from calcs import beam as beam_lib
 from calcs import bolt_group as bolt_lib
 from calcs import bearing as bearing_lib
 from calcs import fits as fits_lib
+from plots import beam_curves_png, png_data_uri
 from web_inputs import FormError, parse_choice, parse_float, parse_float_list, parse_int
 
 
@@ -276,6 +277,15 @@ def create_app() -> Flask:
         if request.method == "POST":
             try:
                 result = beam_from_form(request.form)
+                # 阶段 3：挠度 / 弯矩分布图。曲线数据直接取库返回的 curve（SI），
+                # 换算与绘制在 plots.py；图与表格里的极值点互相印证。
+                result["plot_uri"] = png_data_uri(beam_curves_png(
+                    result["curve"], result["support"],
+                    max_deflection_mm=result["max_deflection_mm"],
+                    max_deflection_x_mm=result["max_deflection_at_x_mm"],
+                    max_moment_Nm=result["max_moment_Nm"],
+                    max_moment_x_mm=result["max_moment_at_x_mm"],
+                ))
             except ValueError as exc:
                 errors.append(str(exc))
         return render_template(

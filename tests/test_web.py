@@ -22,17 +22,11 @@ from app import (
     beam_from_form,
     bearing_from_form,
     bolt_from_form,
-    create_app,
     fits_deviation_from_form,
     fits_fit_from_form,
     sig,
 )
 from web_inputs import FormError
-
-
-@pytest.fixture()
-def client():
-    return create_app().test_client()
 
 
 # --------------------------------------------------------------------------

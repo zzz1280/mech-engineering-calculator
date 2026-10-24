@@ -17,15 +17,20 @@
   - `web_inputs.py`：脏输入拦截（空值 / 非数字 / 越界 → 中文提示，带字段名）
   - `templates/ + static/`：服务端渲染，无前端框架、无数据库、无 JS 依赖
   - 错误输入友好提示；公式库的"诚实报错"（如公差代号未内置）原样透传展示
-- [ ] 阶段 3｜挠度曲线图（Matplotlib）
+- [x] **阶段 3｜挠度曲线图**（2026-10-24 完成）：服务端 Matplotlib 出图，
+      新增 **6 项图表层测试，全套 90 项全部通过**；`calcs/` 依旧零改动
+  - `plots.py`：挠度 / 弯矩双联分布图，数据取库返回的 `curve`（201 点采样），坐标按表单口径换算成 mm
+  - 中文与负号：字体候选链（微软雅黑 → 黑体 → Noto CJK，为部署 Render 预留）+ `axes.unicode_minus=False`；
+    以"缺字形警告零输出"验证通过（悬臂梁负弯矩是负号渲染的天然考验）
+  - 图上标注极值点，与结果表格数值互相印证；PNG 以 data URI 内嵌结果页，无临时文件
 - [ ] 阶段 4｜部署上线（Render）
 - [ ] 阶段 5｜收尾（README 完善 / 主页卡片更新）
 
 ## 本地运行
 
 ```bash
-pip install -r requirements.txt   # pytest + Flask（阶段 1、2 所需）
-python -m pytest tests/ -v        # 运行 84 项单元测试（公式库 49 + Web 层 35）
+pip install -r requirements.txt   # pytest + Flask + matplotlib（阶段 1~3 所需）
+python -m pytest tests/ -v        # 运行 90 项单元测试（公式库 49 + Web 层 35 + 图表层 6）
 python app.py                     # 启动站点，浏览器访问 http://127.0.0.1:5000
 ```
 

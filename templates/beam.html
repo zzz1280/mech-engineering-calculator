@@ -137,6 +137,11 @@
       {% endfor %}
     </table>
   </details>
+
+  {% if result['plot_uri'] %}
+  <img class="plot" src="{{ result['plot_uri'] }}" alt="挠度与弯矩分布图（上：挠度，正方向向下；下：弯矩，正 = 下侧受拉）">
+  <p class="muted">图中标注的极值点与上表数值互相印证；曲线数据取自公式库的采样输出（201 点），坐标轴已换算为表单口径（mm）。</p>
+  {% endif %}
 </section>
 {% endif %}
 
@@ -148,6 +153,5 @@
     <li>出处：刘鸿文《材料力学》（第 6 版）第 6 章「弯曲变形」及附录Ⅱ；孙训方《材料力学》附录Ⅱ。</li>
     <li>挠度正方向与载荷同向（向下为正）；悬臂梁弯矩为负表示固定端上侧受拉。</li>
   </ul>
-  <p class="muted">挠度曲线图（Matplotlib）将在阶段 3 接入本页。</p>
 </section>
 {% endblock %}

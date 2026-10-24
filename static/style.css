@@ -187,6 +187,16 @@ tr.danger td { background: #fdf6ec; }
 .warn { color: var(--warn); font-size: 0.9rem; }
 .muted { color: var(--muted); font-size: 0.85rem; }
 
+/* ---- 阶段 3：挠度 / 弯矩分布图 ---- */
+img.plot {
+  display: block;
+  max-width: 100%;
+  margin: 12px auto 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
 details { margin-top: 8px; }
 details summary { cursor: pointer; color: var(--brand); font-size: 0.9rem; }
 details table { width: 100%; border-collapse: collapse; margin-top: 6px; }

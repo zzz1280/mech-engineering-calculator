@@ -9,3 +9,12 @@ import sys
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
+
+import pytest
+
+
+@pytest.fixture()
+def client():
+    """Flask 测试客户端，供 Web / 图表层的端到端用例共用。"""
+    from app import create_app
+    return create_app().test_client()
