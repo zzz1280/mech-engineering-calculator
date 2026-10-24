@@ -8,8 +8,10 @@
   2. 画图并输出 PNG 字节流。
 
 【中文与负号显示（任务书点名的坑）】
-  · 中文字体：rcParams 的 font.sans-serif 给出候选列表按序回退
-    （Windows 微软雅黑/黑体 → Linux 的 Noto CJK，为阶段 4 部署 Render 预留）；
+  · 中文字体：Render 等云端 Linux 环境**不预装任何 CJK 字体**，只写候选列表
+    到时候照样全是方框。所以仓库捆绑了 Noto Sans SC（OFL 开源许可，可再分发；
+    Windows 自带的微软雅黑有版权，不能进仓库），启动时 addfont 注册并置于
+    候选链首位——开发和线上渲染出的图字体一致。
   · 负号：axes.unicode_minus = False，强制用 ASCII 连字符。
     不关它的话，Matplotlib 会输出 U+2212（数学负号），中文字体里没有这个字形，
     图上所有负数（悬臂梁弯矩就是负的！）会渲染成方框 □。
@@ -22,17 +24,28 @@
 from __future__ import annotations
 
 import base64
+import os
 from io import BytesIO
 from typing import Dict, List, Tuple
 
 import matplotlib
 matplotlib.use("Agg")                       # 必须在 pyplot 之前：无界面后端
 import matplotlib.pyplot as plt
+from matplotlib import font_manager
 
-# 中文字体候选（按序回退）+ ASCII 负号，两行解决"中文变方框 / 负号变方框"
-plt.rcParams["font.sans-serif"] = [
+# 捆绑的开源中文字体（fonts/NotoSansSC-Regular.otf，OFL 许可）。
+# 存在就注册到 matplotlib 的字体管理器并置于候选链首位，
+# 这样 Render 这类没有预装中文字体的环境也能正常出图。
+_BUNDLED_FONT = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                             "fonts", "NotoSansSC-Regular.otf")
+_FONT_CANDIDATES = [
     "Microsoft YaHei", "SimHei", "Noto Sans CJK SC", "WenQuanYi Zen Hei", "sans-serif",
 ]
+if os.path.exists(_BUNDLED_FONT):
+    font_manager.fontManager.addfont(_BUNDLED_FONT)
+    plt.rcParams["font.sans-serif"] = ["Noto Sans SC"] + _FONT_CANDIDATES
+else:                                       # 字体文件缺失时退回系统候选链，不崩
+    plt.rcParams["font.sans-serif"] = _FONT_CANDIDATES
 plt.rcParams["axes.unicode_minus"] = False
 
 _COLOR_DEFLECTION = "#0f5c8c"

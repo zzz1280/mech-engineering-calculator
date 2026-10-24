@@ -84,9 +84,45 @@ def test_series_cantilever_negative_moment_preserved():
 def test_cjk_font_and_minus_sign_configured():
     assert plt.rcParams["axes.unicode_minus"] is False
     font_list = plt.rcParams["font.sans-serif"]
-    # 至少配置了一个 CJK 字体候选（Windows 微软雅黑/黑体，Linux Noto/文泉驿）
-    assert any(name in font_list for name in
-               ("Microsoft YaHei", "SimHei", "Noto Sans CJK SC", "WenQuanYi Zen Hei"))
+    # 捆绑的 Noto Sans SC 注册后应置于候选链首位（开发与线上字体统一）
+    assert font_list[0] == "Noto Sans SC"
+    import os
+    assert os.path.exists(os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "fonts", "NotoSansSC-Regular.otf",
+    ))
+
+
+def test_bundled_font_alone_renders_cjk_and_minus_without_warnings():
+    """模拟 Render 环境：服务器上没有任何系统中文字体，候选链只剩捆绑的
+    Noto Sans SC。悬臂梁（弯矩全负）+ 全中文标注，任何缺字形警告都算失败。
+
+    这是阶段 4 上线前最重要的一条防线——线上没有第二道兜底。
+    """
+    import warnings
+
+    res = beam_from_form({
+        "support": "cantilever", "L": "1000", "P": "500",
+        "material": "custom", "E_gpa": "200",
+        "section": "custom", "I": "100000",
+    })
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")              # 缺字形警告 → 当场抛错
+        plt.rcParams["font.sans-serif"] = ["Noto Sans SC"]   # 只给捆绑字体
+        try:
+            png = beam_curves_png(
+                res["curve"], res["support"],
+                max_deflection_mm=res["max_deflection_mm"],
+                max_deflection_x_mm=res["max_deflection_at_x_mm"],
+                max_moment_Nm=res["max_moment_Nm"],
+                max_moment_x_mm=res["max_moment_at_x_mm"],
+            )
+        finally:
+            plt.rcParams["font.sans-serif"] = ["Noto Sans SC"] + [
+                "Microsoft YaHei", "SimHei", "Noto Sans CJK SC",
+                "WenQuanYi Zen Hei", "sans-serif",
+            ]
+    assert png.startswith(PNG_MAGIC)
 
 
 # --------------------------------------------------------------------------

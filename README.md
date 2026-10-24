@@ -23,16 +23,51 @@
   - 中文与负号：字体候选链（微软雅黑 → 黑体 → Noto CJK，为部署 Render 预留）+ `axes.unicode_minus=False`；
     以"缺字形警告零输出"验证通过（悬臂梁负弯矩是负号渲染的天然考验）
   - 图上标注极值点，与结果表格数值互相印证；PNG 以 data URI 内嵌结果页，无临时文件
-- [ ] 阶段 4｜部署上线（Render）
+- [x] **阶段 4｜部署准备**（2026-10-24 完成）：仓库具备 Render 一键部署条件
+  - `render.yaml`（Blueprint）：`gunicorn --bind 0.0.0.0:$PORT "app:create_app()"`，free 层，健康检查 `/`
+  - 捆绑 `fonts/NotoSansSC-Regular.otf`（OFL 开源许可，可再分发）：Render 原生环境无 CJK 字体，
+    不捆绑的话线上图内中文全是方框；启动时 `addfont` 注册并置于候选链首位，开发/线上字体统一
+  - 用"候选链只剩捆绑字体"的测试**模拟线上环境**：中文 + 悬臂梁负弯矩零缺字形警告通过
+  - 生产级 WSGI 冒烟：gunicorn 是 Unix 服务器 Windows 跑不了，用 waitress 以**完全相同的
+    应用工厂模式**（`--call app:create_app`）本地验证通过
+  - [ ] 待朱锦琰在 Render 控制台实际建服务（需本人账号授权，步骤见下）
 - [ ] 阶段 5｜收尾（README 完善 / 主页卡片更新）
 
 ## 本地运行
 
 ```bash
-pip install -r requirements.txt   # pytest + Flask + matplotlib（阶段 1~3 所需）
-python -m pytest tests/ -v        # 运行 90 项单元测试（公式库 49 + Web 层 35 + 图表层 6）
+pip install -r requirements.txt   # pytest + Flask + matplotlib + gunicorn
+python -m pytest tests/ -v        # 运行 91 项单元测试（公式库 49 + Web 层 35 + 图表层 7）
 python app.py                     # 启动站点，浏览器访问 http://127.0.0.1:5000
 ```
+
+## 部署（Render 免费层）
+
+1. 登录 [render.com](https://render.com)（可用 GitHub 账号直接授权）；
+2. **New → Blueprint**，选择本仓库 `zzz1280/mech-engineering-calculator`——Render 会读取仓库里的
+   `render.yaml` 自动填好构建/启动命令，点 **Apply** 即可；
+   （若不走 Blueprint：New → Web Service，Build Command 填 `pip install -r requirements.txt`，
+   Start Command 填 `gunicorn --bind 0.0.0.0:$PORT --workers 2 --threads 4 "app:create_app()"`）
+3. 首次构建约 3~5 分钟（装 matplotlib 最慢），日志出现 "Booting worker" 即部署成功；
+4. 免费层闲置 15 分钟会休眠，首次唤醒需 30~60 秒，属正常现象。
+
+## 公式来源
+
+| 计算器 | 出处 |
+| --- | --- |
+| 梁挠度与弯矩 | 刘鸿文《材料力学》（第 6 版）第 6 章「弯曲变形」及附录Ⅱ；孙训方《材料力学》附录Ⅱ |
+| 螺栓组受力 | 濮良贵《机械设计》（第 9 版）第 5 章「螺纹连接」；邱宣怀《机械设计》（第 4 版）同章 |
+| 轴承寿命 | 濮良贵《机械设计》（第 9 版）第 13 章「滚动轴承」；GB/T 6391 / ISO 281；X、Y 系数表与 Shigley《Mechanical Engineering Design》Table 11-1 及 JIS B 1518 交叉核对 |
+| 公差配合 | GB/T 1800.2—2020（修改采用 ISO 286-2）标准表值（非经验公式）；表值经标准原文表、Schaeffler/FAG 样本、JIS B 0401 交叉核对 |
+
+补充说明：轴承模块的 f_t / f_p 修正系数为老版教材 / GB 旧制口径，与 ISO 281:2007 起的
+a_ISO 修正额定寿命不同；材料弹性模量为教材典型值，非材料标准保证值。
+
+## 免责声明
+
+**本工具计算结果仅供学习参考，工程应用请以规范手册为准。**
+所有公式均标注出处并配有手算对照测试，但任何计算工具都不能替代设计规范、
+标准图册与有资质工程师的校核。图内中文字体为 Google Noto Sans SC（SIL OFL 1.1 许可）。
 
 ## 工程约定
 

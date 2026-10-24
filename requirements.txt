@@ -1,7 +1,5 @@
-# 阶段 1 只需要 pytest；阶段 2 起 Flask；阶段 3 起 matplotlib
+# 阶段 1 只需要 pytest；阶段 2 起 Flask；阶段 3 起 matplotlib；阶段 4 起 gunicorn
 pytest>=8.0
 Flask>=3.0
 matplotlib>=3.8
-
-# --- 以下为后续阶段使用，先不装，保持环境干净 ---
-# gunicorn>=21.0      # 阶段 4 部署（Render 用）
+gunicorn>=21.0
