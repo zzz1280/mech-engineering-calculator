@@ -4,34 +4,43 @@
 
 > 我的第二个作品集项目 · 任务书见 [zzz1280/zzz1280.github.io/projects](https://github.com/zzz1280/zzz1280.github.io/blob/main/projects/02-mech-engineering-calculator.md)
 
+## 界面预览
+
+| 首页 | 梁挠度与弯矩（含分布图） |
+| --- | --- |
+| ![首页](docs/screenshots/01-home.png) | ![梁挠度与弯矩](docs/screenshots/02-beam-deflection.png) |
+
+| 螺栓组受力分析 | 轴承寿命 / 公差配合 |
+| --- | --- |
+| ![螺栓组受力分析](docs/screenshots/03-bolt-group.png) | ![轴承寿命](docs/screenshots/04-bearing-life.png) ![公差配合](docs/screenshots/05-fits.png) |
+
+以上均为真实运行截图，示例数值与手算对照一致（如简支梁跨中集中力 δ=8.333 mm、φ30 H7/g6 最大间隙 +41 μm）。
+
 ## 当前进度
 
-- [x] **阶段 1｜公式库**（2026-09-07 完成）：`calcs/` 纯函数模块 + **49 项单元测试全部通过**
+**✅ 项目已完成（2026-10-24）。** 五个阶段全部走完：
+
+- [x] **阶段 1｜公式库**（2026-09-07）：`calcs/` 纯函数模块 + **49 项手算对照测试全部通过**
   - `beam.py` 梁的挠度与弯矩（简支 / 悬臂，集中 / 均布载荷）
   - `bolt_group.py` 螺栓组受力（轴向 / 倾覆 / 扭矩 / 摩擦预紧）
   - `bearing.py` 深沟球轴承寿命（L10 基本额定寿命）
   - `fits.py` 常用配合公差查询（基孔制 / 基轴制）
-- [x] **阶段 2｜Flask Web 化**（2026-10-24 完成）：4 个计算器路由 + 表单校验 + 结果页，
-      Web 层新增 **35 项测试，全套 84 项全部通过**；`calcs/` 公式库零改动直接复用
+- [x] **阶段 2｜Flask Web 化**（2026-10-24）：4 个计算器路由 + 表单校验 + 结果页，
+      Web 层新增 **35 项测试**；`calcs/` 公式库零改动直接复用
   - `app.py`：路由 + 输入层单位换算（换算前后在结果页回显）+ 有效数字显示（4 位）
   - `web_inputs.py`：脏输入拦截（空值 / 非数字 / 越界 → 中文提示，带字段名）
   - `templates/ + static/`：服务端渲染，无前端框架、无数据库、无 JS 依赖
   - 错误输入友好提示；公式库的"诚实报错"（如公差代号未内置）原样透传展示
-- [x] **阶段 3｜挠度曲线图**（2026-10-24 完成）：服务端 Matplotlib 出图，
-      新增 **6 项图表层测试，全套 90 项全部通过**；`calcs/` 依旧零改动
-  - `plots.py`：挠度 / 弯矩双联分布图，数据取库返回的 `curve`（201 点采样），坐标按表单口径换算成 mm
-  - 中文与负号：字体候选链（微软雅黑 → 黑体 → Noto CJK，为部署 Render 预留）+ `axes.unicode_minus=False`；
-    以"缺字形警告零输出"验证通过（悬臂梁负弯矩是负号渲染的天然考验）
-  - 图上标注极值点，与结果表格数值互相印证；PNG 以 data URI 内嵌结果页，无临时文件
-- [x] **阶段 4｜部署准备**（2026-10-24 完成）：仓库具备 Render 一键部署条件
+- [x] **阶段 3｜挠度曲线图**（2026-10-24）：服务端 Matplotlib 出图，新增 6 项图表层测试
+  - `plots.py`：挠度 / 弯矩双联分布图，极值点标注与结果表格互相印证；PNG 以 data URI 内嵌，无临时文件
+  - 中文与负号：`axes.unicode_minus=False` + 字体候选链；以"缺字形警告零输出"验证（悬臂梁负弯矩是负号渲染的天然考验）
+- [x] **阶段 4｜部署准备**（2026-10-24）：仓库具备 Render 一键部署条件，**最终决定不上线，配置留作备用**
   - `render.yaml`（Blueprint）：`gunicorn --bind 0.0.0.0:$PORT "app:create_app()"`，free 层，健康检查 `/`
-  - 捆绑 `fonts/NotoSansSC-Regular.otf`（OFL 开源许可，可再分发）：Render 原生环境无 CJK 字体，
-    不捆绑的话线上图内中文全是方框；启动时 `addfont` 注册并置于候选链首位，开发/线上字体统一
-  - 用"候选链只剩捆绑字体"的测试**模拟线上环境**：中文 + 悬臂梁负弯矩零缺字形警告通过
-  - 生产级 WSGI 冒烟：gunicorn 是 Unix 服务器 Windows 跑不了，用 waitress 以**完全相同的
-    应用工厂模式**（`--call app:create_app`）本地验证通过
-  - [ ] 待朱锦琰在 Render 控制台实际建服务（需本人账号授权，步骤见下）
-- [ ] 阶段 5｜收尾（README 完善 / 主页卡片更新）
+  - 捆绑 `fonts/NotoSansSC-Regular.otf`（OFL 开源许可）：云端环境无 CJK 字体时的兜底，
+    并有"候选链只剩捆绑字体"的测试**模拟线上环境**（中文 + 悬臂梁负弯矩零缺字形警告通过）
+  - 生产级 WSGI 冒烟：gunicorn 为 Unix 服务器，本地用 waitress 以**相同的应用工厂模式**验证通过
+  - 未上线原因：目标是国内同学真实使用，海外免费托管访问慢且会休眠，反而影响体验（详见任务书进度日志）
+- [x] **阶段 5｜收尾**（2026-10-24）：真实运行截图上站（见「界面预览」）、README 完善、主页卡片更新
 
 ## 本地运行
 
@@ -41,15 +50,10 @@ python -m pytest tests/ -v        # 运行 91 项单元测试（公式库 49 + W
 python app.py                     # 启动站点，浏览器访问 http://127.0.0.1:5000
 ```
 
-## 部署（Render 免费层）
+### 部署（备用方案，未启用）
 
-1. 登录 [render.com](https://render.com)（可用 GitHub 账号直接授权）；
-2. **New → Blueprint**，选择本仓库 `zzz1280/mech-engineering-calculator`——Render 会读取仓库里的
-   `render.yaml` 自动填好构建/启动命令，点 **Apply** 即可；
-   （若不走 Blueprint：New → Web Service，Build Command 填 `pip install -r requirements.txt`，
-   Start Command 填 `gunicorn --bind 0.0.0.0:$PORT --workers 2 --threads 4 "app:create_app()"`）
-3. 首次构建约 3~5 分钟（装 matplotlib 最慢），日志出现 "Booting worker" 即部署成功；
-4. 免费层闲置 15 分钟会休眠，首次唤醒需 30~60 秒，属正常现象。
+仓库保留 `render.yaml`，随时可上线：Render 控制台 → New → Blueprint → 选中本仓库 → Apply，
+首次构建约 3~5 分钟。免费层闲置 15 分钟会休眠，首次唤醒需 30~60 秒。
 
 ## 公式来源
 
